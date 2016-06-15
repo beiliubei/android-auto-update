@@ -28,6 +28,10 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
+import com.loopj.android.http.SyncHttpClient;
+import com.loopj.android.http.TextHttpResponseHandler;
+import cz.msebera.android.httpclient.Header;
+
 public class UpdateChecker extends Fragment {
 
 	//private static final String NOTIFICATION_ICON_RES_ID_KEY = "resId";
@@ -41,6 +45,8 @@ public class UpdateChecker extends Fragment {
 	private FragmentActivity mContext;
 	private Thread mThread;
 	private int mTypeOfNotice;
+
+	private String response;
 
 	/**
 	 * Show a Dialog if an update is available for download. Callable in a
@@ -123,65 +129,19 @@ public class UpdateChecker extends Fragment {
 	}
 
 	protected String sendPost(String urlStr) {
-		HttpURLConnection uRLConnection = null;
-		InputStream is = null;
-		BufferedReader buffer = null;
-		String result = null;
-		try {
-			URL url = new URL(urlStr);
-			uRLConnection = (HttpURLConnection) url.openConnection();
-			uRLConnection.setDoInput(true);
-			uRLConnection.setDoOutput(true);
-			uRLConnection.setRequestMethod("POST");
-			uRLConnection.setUseCaches(false);
-			uRLConnection.setConnectTimeout(10 * 1000);
-			uRLConnection.setReadTimeout(10 * 1000);
-			uRLConnection.setInstanceFollowRedirects(false);
-			uRLConnection.setRequestProperty("Connection", "Keep-Alive");
-			uRLConnection.setRequestProperty("Charset", "UTF-8");
-			uRLConnection.setRequestProperty("Accept-Encoding", "gzip, deflate");
-			uRLConnection.setRequestProperty("Content-Type", "application/json");
+		SyncHttpClient client = new SyncHttpClient();
+        client.get(urlStr, new TextHttpResponseHandler() {
+                   @Override
+                   public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
 
-			uRLConnection.connect();
+                   }
 
-			
-			is = uRLConnection.getInputStream();
-
-			String content_encode = uRLConnection.getContentEncoding();
-
-			if (null != content_encode && !"".equals(content_encode) && content_encode.equals("gzip")) {
-				is = new GZIPInputStream(is);
-			}
-
-			buffer = new BufferedReader(new InputStreamReader(is));
-			StringBuilder strBuilder = new StringBuilder();
-			String line;
-			while ((line = buffer.readLine()) != null) {
-				strBuilder.append(line);
-			}
-			result = strBuilder.toString();
-		} catch (Exception e) {
-			Log.e(TAG, "http post error", e);
-		} finally {
-			if(buffer!=null){
-				try {
-					buffer.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			if(is!=null){
-				try {
-					is.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			if(uRLConnection!=null){
-				uRLConnection.disconnect();
-			}
-		}
-		return result;
+                   @Override
+                   public void onSuccess(int statusCode, Header[] headers, String responseString) {
+                       response = responseString;
+                   }
+               });
+		return response;
 	}
 
 	
@@ -246,7 +206,6 @@ public class UpdateChecker extends Fragment {
 		NotificationManager notificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
 		notificationManager.notify(0, noti);
 	}
-
 	
 
 	/**
